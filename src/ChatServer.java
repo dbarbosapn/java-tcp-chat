@@ -5,222 +5,217 @@ import java.nio.channels.*;
 import java.nio.charset.*;
 import java.util.*;
 
-public class ChatServer
-{
-    // A pre-allocated buffer for the received data
-    static private final ByteBuffer buffer = ByteBuffer.allocate(16384);
+public class ChatServer {
+	// A pre-allocated buffer for the received data
+	static private final ByteBuffer buffer = ByteBuffer.allocate(16384);
 
-    /* A named mapping between sequences of sixteen-bit Unicode
-       code units and sequences of bytes*/
+	/* Returns a charset object for the named charset. */
+	static public final Charset charset = Charset.forName("UTF8");
 
-    /* Returns a charset object for the named charset.*/
-    static private final Charset charset = Charset.forName("UTF8");
+	/* Constructs a new decoder for this charset. */
+	static private final CharsetDecoder decoder = charset.newDecoder();
 
-    /* Constructs a new decoder for this charset. */
-    static private final CharsetDecoder decoder = charset.newDecoder();
+	/* A selectable channel for stream-oriented listening sockets. */
+	static private ServerSocketChannel ssc;
 
-    /*  A selectable channel for stream-oriented listening sockets. */
-    static private ServerSocketChannel ssc;
+	static private ServerSocket ss;
 
-    /**/
-    static private ServerSocket ss;
+	/* A multiplexor of SelectableChannel objects. */
+	static private Selector selector;
 
-    /* A multiplexor of SelectableChannel objects. */
-    static private Selector selector;
+	static public void main(String argv[]) throws Exception {
+		int port;
 
-    static private User user;
+		// Try to read port from the command arguments
+		try {
+			port = Integer.parseInt(argv[0]);
+		} catch (Exception ex) {
+			System.out.print("Usage: java ChatServer <port>\n");
+			return;
+		}
 
-    static private FSM stateMachine;
+		openSocket(port);
 
-    static public void main(String argv[]) throws Exception
-    {
-	user = new User();
-	stateMachine = new FSM();
+		while (true) {
+			run();
+		}
+	}
 
-	dealWithConnection(argv);
+	static private void openSocket(int port) throws Exception {
+		try {
+			ssc = ServerSocketChannel.open();
 
-	while( true )
-	    {
-		doAction();
-	    }
-    }
+			/*
+			 * Set it to non-blocking, so we can use select, i.e a non-blocking socket
+			 * allows I/O operation on a channel without blocking the processes using it.
+			 */
+			ssc.configureBlocking(false);
 
-    static private void dealWithConnection(String argv[]) throws Exception
-    {
-	int port;
+			/* Retrieves a server socket associated with this channel. */
+			ss = ssc.socket();
 
-	// Read port from command line and deal with usage error
-	try { port = Integer.parseInt(argv[0]); }
+			/*
+			 * Binds the channel's socket to a local address and configures the socket to
+			 * listen for connections.
+			 */
+			ss.bind(new InetSocketAddress(port));
 
-	catch ( Exception ex )
-	    {
-		System.out.print("Usage: java Server <port>\n");
-		return;
-	    }
+			/*
+			 * A multiplexor of SelectableChannel objects. Create a new Selector for
+			 * selecting.
+			 */
+			selector = Selector.open();
 
-	try
-	    {
-		ssc = ServerSocketChannel.open();
+			/*
+			 * Registers this channel with the given selector, returning a selection key.
+			 */
+			ssc.register(selector, SelectionKey.OP_ACCEPT);
+			System.out.println("Listening on port " + port);
+		} catch (Exception ie) {
+			System.err.println(ie);
+		}
+	}
 
-		 /* Set it to non-blocking, so we can use select, i.e
-		    a non-blocking socket allows I/O operation on a channel
-		    without blocking the processes using it. */
-		 ssc.configureBlocking(false);
+	static private void run() throws Exception {
+		/*
+		 * Selects a set of keys whose corresponding channels are ready for I/O
+		 * operations.
+		 */
+		int num = selector.select();
 
-		 /* Retrieves a server socket associated with this channel.*/
-		 ss = ssc.socket();
+		/* No activity */
+		if (num == 0)
+			return;
 
-		 /* Binds the channel's socket to a local address and
-		    configures the socket to listen for connections. */
-		 ss.bind(new InetSocketAddress(port));
+		/* Returns this selector's selected-key set, i.e does ready fo IO op */
+		Set<SelectionKey> keySet = selector.selectedKeys();
 
-		 /* A multiplexor of SelectableChannel objects.
-		    Create a new Selector for selecting. */
-		 selector = Selector.open();
+		/* Returns an iterator over the elements in this set. */
+		Iterator<SelectionKey> keyIt = keySet.iterator();
 
-		 /* Registers this channel with the given selector,
-		    returning a selection key.*/
-		 ssc.register(selector, SelectionKey.OP_ACCEPT);
-		 System.out.println( "Listening on port "+port );
-	    }
+		while (keyIt.hasNext()) {
+			/* Returns the next element in the iteration */
+			SelectionKey curKey = keyIt.next();
 
-	catch ( Exception ie )
-	    {
-		System.err.println( ie );
-	    }
-    }
+			/* Check activity */
 
-    static private void doAction() throws Exception
-    {
-	/* Selects a set of keys whose corresponding channels are ready
-	   for I/O operations.*/
-	int num = selector.select();
+			/*
+			 * Tests whether this key's channel is ready to accept a new socket connection.
+			 */
+			if (curKey.isAcceptable()) {
+				/*
+				 * Listens for a connection to be made to this socket and accepts it.
+				 */
+				Socket s = ss.accept();
+				System.out.println("Got connection from " + s);
 
-	/* No activity */
-	if ( num == 0 )
-	    return;
+				/*
+				 * Returns the unique ServerSocketChannel object associated with this socket, if
+				 * any.
+				 */
+				SocketChannel sc = s.getChannel();
 
-	/* Returns this selector's selected-key set, i.e does ready fo IO op*/
-	Set <SelectionKey> keySet = selector.selectedKeys();
+				/* Make it non-blocking, so we can use a selector on it */
+				sc.configureBlocking(false);
 
-	/* Returns an iterator over the elements in this set. */
-	Iterator <SelectionKey> keyIt = keySet.iterator();
+				/* Register it with the selector */
+				sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+			} else if (curKey.isReadable()) {
+				SocketChannel sc = null;
 
-	while ( keyIt.hasNext() )
-	    {
-		/* Returns the next element in the iteration */
-		SelectionKey curKey = keyIt.next();
+				try {
+					sc = (SocketChannel) curKey.channel();
+					String socketInput = getSocketInput(sc);
 
-		/* Check activity */
+					if (socketInput == null) {
+						if (curKey.attachment() != null) {
+							User.getByName((String) curKey.attachment()).delete();
+						}
 
-		/* Tests whether this key's channel is ready to accept
-		   a new socket connection.*/
-		if ( curKey.isAcceptable() )
-		    {
-			/*Listens for a connection to be made to this
-			  socket and accepts it. */
-			Socket s = ss.accept();
-			System.out.println("Got connection from " + s);
+						curKey.cancel();
 
-			/* Returns the unique ServerSocketChannel object
-			   associated with this socket, if any.*/
-			SocketChannel sc = s.getChannel();
+						Socket s = null;
 
-			/* Make it non-blocking, so we can use a selector on it*/
-			sc.configureBlocking(false);
+						try {
+							s = sc.socket();
+							System.out.println("Closing connection " + s);
+							s.close();
+						} catch (IOException ie) {
+							System.err.println("Error closing socket " + s + ": " + ie);
+						}
+					} else {
+						processInput(socketInput, curKey);
+					}
+				} catch (IOException ie) {
+					if (curKey.attachment() != null) {
+						User.getByName((String) curKey.attachment()).delete();
+					}
 
-			/* Register it with the selector */
-			sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-
-			user.newUser(sc, "");
-			stateMachine.newState(sc, "init");
-
-		    }
-
-		else if ( curKey.isReadable() )
-		    {
-			SocketChannel sc = null;
-
-			try
-			    {
-				sc = (SocketChannel)curKey.channel();
-				boolean ok = processInput(sc);
-
-				if ( !ok )
-				    {
+					/* On exception, remove this channel from the selector */
 					curKey.cancel();
 
-					user.removeUser(sc);
+					try {
+						sc.close();
+					} catch (IOException ie2) {
+						System.out.println(ie2);
+					}
 
-					Socket s = null;
+					System.out.println("Closed " + sc);
+				}
+			}
+		}
 
-					try
-					    {
-						s = sc.socket();
-						System.out.println
-						    ("Closing connection "+s );
-						s.close();
-					    }
+		// We remove the selected keys, because we've dealt with them.
+		keySet.clear();
+	}
 
-					catch ( IOException ie )
-					    {
-						 System.err.println
-						     ("Error closing socket "+s+": "+ie );
-					    }
-				    }
-			    }
+	static private String getSocketInput(SocketChannel sc) throws IOException {
+		buffer.clear();
+		sc.read(buffer);
+		buffer.flip();
 
-			catch ( IOException ie )
-			    {
-				/* On exception, remove this channel from the selector */
-				 curKey.cancel();
+		if (buffer.limit() == 0)
+			return null;
 
-				 try { sc.close(); }
+		return decoder.decode(buffer).toString();
+	}
 
-				 catch( IOException ie2 ) { System.out.println(ie2); }
+	static private void processInput(String input, SelectionKey key) throws IOException {
+		// Check if user exists
+		if (key.attachment() != null) {
+			// Process the input for the respective user
+			processUserInput(input, User.getByName((String) key.attachment()));
+		} else {
+			String[] inputArray = input.split(" ");
 
-				 System.out.println( "Closed "+sc );
-			    }
-		    }
-	    }
+			// Tries to create user, if there is a nick command. Send error if unsuccessful
+			if (inputArray.length != 2 || !inputArray[0].equals("/nick") || !User.create(inputArray[1], key)) {
+				MessagingUtils.sendError(key);
+			}
+		}
+	}
 
-	// We remove the selected keys, because we've dealt with them.
-	keySet.clear();
-    }
+	static private void processUserInput(String input, User user) throws IOException {
+		// Check if is command or message
+		if (input.charAt(0) == '/' && input.length() > 1 && input.charAt(1) != '/') {
+			processUserCommand(input.split(" "), user);
+		} else if (user.isInRoom()) {
+			if (input.charAt(0) == '/')
+				input = input.substring(1);
 
-    static private boolean processInput(SocketChannel sc) throws IOException
-    {
-	buffer.clear();
-	sc.read(buffer);
-	buffer.flip();
+			user.sendMessage(input);
+		} else {
+			MessagingUtils.sendError(user);
+		}
+	}
 
-	if ( buffer.limit() == 0 )
-	    return false;
-
-	String str = stateMachine.redirect(sc, user, decoder.decode(buffer).toString());
-
-	sc.write(charset.encode(CharBuffer.wrap(str)));
-
-	if ( str.matches("ERROR.*") )
-	    return false;
-
-	else
-	    return true;
-    }
-
-    static private void broadCast(ByteBuffer bf) throws IOException
-    {
-	Iterator <SelectionKey> it = selector.keys().iterator();
-
-	while ( it.hasNext() )
-	    {
-		SelectionKey curKey = it.next();
-
-		if ( curKey.isWritable() )
-		    {
-			int n = ((SocketChannel)curKey.channel()).write(bf);
-			bf.rewind();
-		    }
-	    }
-    }
+	static private void processUserCommand(String[] input, User user) throws IOException {
+		switch (input[0]) {
+			case "/join":
+				if (input.length != 2)
+					MessagingUtils.sendError(user);
+				user.joinRoom(input[1]);
+				break;
+		}
+	}
 }
