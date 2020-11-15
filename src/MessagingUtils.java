@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 public class MessagingUtils {
@@ -8,24 +7,31 @@ public class MessagingUtils {
     private MessagingUtils() {
     }
 
-    public static void sendOK(SelectionKey key) throws IOException {
-        sendMessage(key, MessageType.OK);
+    public static void sendBye(User user) throws IOException {
+        sendMessage(user.getChannel(), MessageType.BYE);
+    }
+
+    public static void sendOK(SocketChannel channel) throws IOException {
+        sendMessage(channel, MessageType.OK);
     }
 
     public static void sendOK(User user) throws IOException {
-        sendMessage(user.getKey(), MessageType.OK);
+        sendMessage(user.getChannel(), MessageType.OK);
     }
 
-    public static void sendError(SelectionKey key) throws IOException {
-        sendMessage(key, MessageType.ERROR);
+    public static void sendError(SocketChannel channel) throws IOException {
+        sendMessage(channel, MessageType.ERROR);
     }
 
     public static void sendError(User user) throws IOException {
-        sendMessage(user.getKey(), MessageType.ERROR);
+        sendMessage(user.getChannel(), MessageType.ERROR);
     }
 
-    private static void sendMessage(SelectionKey key, MessageType type, String... data) throws IOException {
-        SocketChannel channel = (SocketChannel) key.channel();
+    public static void sendMessage(User user, MessageType type, String... data) throws IOException {
+        sendMessage(user.getChannel(), type, data);
+    }
+
+    private static void sendMessage(SocketChannel channel, MessageType type, String... data) throws IOException {
         String message = null;
 
         switch (type) {
