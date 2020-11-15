@@ -33,10 +33,13 @@ public class Room {
      * 
      * @param user to remove
      */
-    public void removeUser(User user) {
+    public void removeUser(User user) throws IOException {
         users.remove(user);
-        if (users.size() == 0)
+        if (users.size() == 0) {
             rooms.remove(this.name);
+        } else {
+            sendLeftMessage(user.getName());
+        }
     }
 
     public void addUser(User user) throws IOException {
@@ -44,15 +47,19 @@ public class Room {
         users.add(user);
     }
 
-    public void sendMessage(String message) throws IOException {
-        broadcast(MessageType.MESSAGE, message);
+    public void sendMessage(String username, String message) throws IOException {
+        broadcast(MessageType.MESSAGE, username, message);
     }
 
     private void sendJoinedMessage(String name) throws IOException {
         broadcast(MessageType.JOINED, name);
     }
 
-    private void broadcast(MessageType type, String data) throws IOException {
+    private void sendLeftMessage(String name) throws IOException {
+        broadcast(MessageType.LEFT, name);
+    }
+
+    private void broadcast(MessageType type, String... data) throws IOException {
         for (User user : users) {
             MessagingUtils.sendMessage(user, type, data);
         }

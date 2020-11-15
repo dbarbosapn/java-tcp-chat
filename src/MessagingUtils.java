@@ -7,16 +7,20 @@ public class MessagingUtils {
     private MessagingUtils() {
     }
 
-    public static void sendOK(SocketChannel key) throws IOException {
-        sendMessage(key, MessageType.OK);
+    public static void sendBye(User user) throws IOException {
+        sendMessage(user.getChannel(), MessageType.BYE);
+    }
+
+    public static void sendOK(SocketChannel channel) throws IOException {
+        sendMessage(channel, MessageType.OK);
     }
 
     public static void sendOK(User user) throws IOException {
         sendMessage(user.getChannel(), MessageType.OK);
     }
 
-    public static void sendError(SocketChannel key) throws IOException {
-        sendMessage(key, MessageType.ERROR);
+    public static void sendError(SocketChannel channel) throws IOException {
+        sendMessage(channel, MessageType.ERROR);
     }
 
     public static void sendError(User user) throws IOException {

@@ -111,7 +111,7 @@ public class User {
 	/**
 	 * Leaves the current room
 	 */
-	public void leaveRoom() {
+	public void leaveRoom() throws IOException {
 		if (currentRoom == null)
 			return;
 		currentRoom.removeUser(this);
@@ -141,15 +141,16 @@ public class User {
 	/**
 	 * Deletes the user removing him from the room
 	 */
-	public void delete() {
+	public void delete() throws IOException {
 		leaveRoom();
 		users.remove(this.userChannel);
 		if (currentState != Protocol.State.INIT) {
 			names.remove(this.name);
 		}
+		this.userChannel.close();
 	}
 
 	public void sendMessage(String message) throws IOException {
-		currentRoom.sendMessage(message);
+		currentRoom.sendMessage(this.name, message);
 	}
 }

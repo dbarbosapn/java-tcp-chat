@@ -130,7 +130,9 @@ public class ChatServer {
 					String socketInput = getSocketInput(sc);
 
 					if (socketInput == null) {
-						User.getByChannel(sc).delete();
+						User u = User.getByChannel(sc);
+						if (u != null)
+							u.delete();
 
 						curKey.cancel();
 
@@ -147,7 +149,9 @@ public class ChatServer {
 						Protocol.processInput(socketInput, sc);
 					}
 				} catch (IOException ie) {
-					User.getByChannel(sc).delete();
+					User u = User.getByChannel(sc);
+					if (u != null)
+						u.delete();
 
 					curKey.cancel();
 

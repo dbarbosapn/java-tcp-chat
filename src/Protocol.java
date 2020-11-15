@@ -12,6 +12,7 @@ public class Protocol {
 
     public static void processInput(String input, SocketChannel channel) throws IOException {
         User user = User.getByChannel(channel);
+        input = input.replace("\n", "").replace("\r", "");
 
         switch (user.getCurrentState()) {
             case INIT:
@@ -26,18 +27,6 @@ public class Protocol {
         }
     }
 
-    private static void initState(String input, User user) throws IOException {
-        String[] tokens = parseInput(input);
-
-        switch (tokens[0]) {
-            case "/nick":
-                nickCommand(tokens, user);
-                break;
-            default:
-                MessagingUtils.sendError(user);
-        }
-    }
-
     private static String parseInsideInput(String input) {
         if (input.charAt(0) == '/' && (input.length() > 1 && input.charAt(1) == '/')) {
             return input.substring(1);
@@ -48,22 +37,46 @@ public class Protocol {
         }
     }
 
+    private static void initState(String input, User user) throws IOException {
+        String[] tokens = parseInput(input);
+
+        switch (tokens[0]) {
+            case "/nick":
+                nickCommand(tokens, user);
+                break;
+            case "/bye":
+                byeCommand(user);
+                break;
+            default:
+                MessagingUtils.sendError(user);
+        }
+    }
+
     private static void insideState(String input, User user) throws IOException {
         String message = parseInsideInput(input);
 
         if (message == null) {
             String[] tokens = parseInput(input);
 
+            System.out.println("Inside command: " + tokens[0]);
+
             switch (tokens[0]) {
                 case "/join":
                     joinCommand(tokens, user);
+                    break;
+                case "/nick":
+                    nickCommand(tokens, user);
+                    break;
+                case "/leave":
+                    leaveCommand(user);
+                    break;
+                case "/bye":
+                    byeCommand(user);
                     break;
                 default:
                     MessagingUtils.sendError(user);
             }
         } else {
-            // TODO: Check if input starts with /. If it does, remove it.
-            // (input.substring(1))
             user.sendMessage(message);
         }
     }
@@ -77,6 +90,9 @@ public class Protocol {
                 break;
             case "/join":
                 joinCommand(tokens, user);
+                break;
+            case "/bye":
+                byeCommand(user);
                 break;
             default:
                 MessagingUtils.sendError(user);
@@ -104,4 +120,16 @@ public class Protocol {
 
         user.setState(State.INSIDE);
     }
+
+    private static void leaveCommand(User user) throws IOException {
+        user.leaveRoom();
+        MessagingUtils.sendOK(user);
+        user.setState(State.OUTSIDE);
+    }
+
+    private static void byeCommand(User user) throws IOException {
+        MessagingUtils.sendBye(user);
+        user.delete();
+    }
+
 }
