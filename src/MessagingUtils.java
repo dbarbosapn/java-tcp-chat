@@ -61,7 +61,7 @@ public class MessagingUtils {
         message += '\n';
 
         if (message != null) {
-            channel.write(ByteBuffer.wrap(message.getBytes()));
+	    channel.write(ChatServer.charset.encode(message));
         }
     }
 

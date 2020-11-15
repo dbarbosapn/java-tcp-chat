@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.regex.Pattern;
 
 public class Protocol {
     public static enum State {
@@ -52,33 +53,39 @@ public class Protocol {
         }
     }
 
-    private static void insideState(String input, User user) throws IOException {
-        String message = parseInsideInput(input);
+    private static void insideState(String input, User user) throws IOException
+    {
+	/* Checks if its a message without // at the start */
+	if ( input.matches("^[^/](.|\\s)*") )
+            user.sendMessage(input);
 
-        if (message == null) {
-            String[] tokens = parseInput(input);
+	/* Checks if its a message with // at the start */
+	else if ( input.matches("^(//)(.|\\s)*") )
+	    user.sendMessage(input.replaceFirst("/", ""));
 
-            System.out.println("Inside command: " + tokens[0]);
+	else
+	    {
+		String[] tokens = parseInput(input);
 
-            switch (tokens[0]) {
-                case "/join":
-                    joinCommand(tokens, user);
-                    break;
-                case "/nick":
-                    nickCommand(tokens, user);
-                    break;
-                case "/leave":
-                    leaveCommand(user);
-                    break;
-                case "/bye":
-                    byeCommand(user);
-                    break;
-                default:
-                    MessagingUtils.sendError(user);
-            }
-        } else {
-            user.sendMessage(message);
-        }
+		switch (tokens[0])
+		    {
+		    case "/join":
+			joinCommand(tokens, user);
+			break;
+		    case "/nick":
+			nickCommand(tokens, user);
+			break;
+		    case "/leave":
+			leaveCommand(user);
+			break;
+		    case "/bye":
+			byeCommand(user);
+			break;
+		    default:
+			MessagingUtils.sendError(user);
+
+		    }
+	    }
     }
 
     private static void outsideState(String input, User user) throws IOException {
