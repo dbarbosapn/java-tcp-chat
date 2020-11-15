@@ -1,4 +1,6 @@
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -6,7 +8,7 @@ public class Room {
     private static Map<String, Room> rooms = new HashMap<>();
 
     private String name;
-    private Set<User> users;
+    private Set<User> users = new HashSet<>();
 
     public Room(String name) {
         this.name = name;
@@ -20,7 +22,9 @@ public class Room {
      * @return the room
      */
     public static Room getByName(String name) {
-        rooms.putIfAbsent(name, new Room(name));
+        if (!rooms.containsKey(name)) {
+            rooms.put(name, new Room(name));
+        }
         return rooms.get(name);
     }
 
@@ -35,12 +39,22 @@ public class Room {
             rooms.remove(this.name);
     }
 
-    public void addUser(User user) {
+    public void addUser(User user) throws IOException {
+        sendJoinedMessage(user.getName());
         users.add(user);
-        // TODO: Send message JOIN
     }
 
-    public void sendMessage(String message) {
+    public void sendMessage(String message) throws IOException {
+        broadcast(MessageType.MESSAGE, message);
+    }
 
+    private void sendJoinedMessage(String name) throws IOException {
+        broadcast(MessageType.JOINED, name);
+    }
+
+    private void broadcast(MessageType type, String data) throws IOException {
+        for (User user : users) {
+            MessagingUtils.sendMessage(user, type, data);
+        }
     }
 }

@@ -4,4 +4,4 @@ srcDir="./src/"
 ## Java options
 javaOpt="-cp $binDir"
 
-java $javaOpt $1 $2
+java $javaOpt $1 $2 $3

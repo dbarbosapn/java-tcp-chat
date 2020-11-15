@@ -120,17 +120,17 @@ public class ChatServer {
 
 				/* Register it with the selector */
 				sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+
+				/* Create a new user */
+				User.create(sc);
 			} else if (curKey.isReadable()) {
-				SocketChannel sc = null;
+				SocketChannel sc = (SocketChannel) curKey.channel();
 
 				try {
-					sc = (SocketChannel) curKey.channel();
 					String socketInput = getSocketInput(sc);
 
 					if (socketInput == null) {
-						if (curKey.attachment() != null) {
-							User.getByName((String) curKey.attachment()).delete();
-						}
+						User.getByChannel(sc).delete();
 
 						curKey.cancel();
 
@@ -144,14 +144,11 @@ public class ChatServer {
 							System.err.println("Error closing socket " + s + ": " + ie);
 						}
 					} else {
-						processInput(socketInput, curKey);
+						Protocol.processInput(socketInput, sc);
 					}
 				} catch (IOException ie) {
-					if (curKey.attachment() != null) {
-						User.getByName((String) curKey.attachment()).delete();
-					}
+					User.getByChannel(sc).delete();
 
-					/* On exception, remove this channel from the selector */
 					curKey.cancel();
 
 					try {
@@ -178,44 +175,5 @@ public class ChatServer {
 			return null;
 
 		return decoder.decode(buffer).toString();
-	}
-
-	static private void processInput(String input, SelectionKey key) throws IOException {
-		// Check if user exists
-		if (key.attachment() != null) {
-			// Process the input for the respective user
-			processUserInput(input, User.getByName((String) key.attachment()));
-		} else {
-			String[] inputArray = input.split(" ");
-
-			// Tries to create user, if there is a nick command. Send error if unsuccessful
-			if (inputArray.length != 2 || !inputArray[0].equals("/nick") || !User.create(inputArray[1], key)) {
-				MessagingUtils.sendError(key);
-			}
-		}
-	}
-
-	static private void processUserInput(String input, User user) throws IOException {
-		// Check if is command or message
-		if (input.charAt(0) == '/' && input.length() > 1 && input.charAt(1) != '/') {
-			processUserCommand(input.split(" "), user);
-		} else if (user.isInRoom()) {
-			if (input.charAt(0) == '/')
-				input = input.substring(1);
-
-			user.sendMessage(input);
-		} else {
-			MessagingUtils.sendError(user);
-		}
-	}
-
-	static private void processUserCommand(String[] input, User user) throws IOException {
-		switch (input[0]) {
-			case "/join":
-				if (input.length != 2)
-					MessagingUtils.sendError(user);
-				user.joinRoom(input[1]);
-				break;
-		}
 	}
 }

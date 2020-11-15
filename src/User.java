@@ -1,46 +1,41 @@
 import java.io.IOException;
-import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class User {
-	private static Map<String, User> users = new HashMap<>();
+	private static Map<SocketChannel, User> users = new HashMap<>();
+	private static Set<String> names = new HashSet<>();
 
 	private String name;
-	private SelectionKey userKey;
+	private SocketChannel userChannel;
 	private Room currentRoom;
+	private Protocol.State currentState;
 
-	private User(String name, SelectionKey userKey) {
-		this.name = name;
-		this.userKey = userKey;
-
-		userKey.attach(name);
+	private User(SocketChannel userChannel) {
+		this.userChannel = userChannel;
+		this.currentState = Protocol.State.INIT;
+		this.name = null;
 	}
 
 	/**
-	 * Get an user instance from its name
+	 * Get an user instance from its channel
 	 * 
-	 * @param name to search
+	 * @param channel to search
 	 * @return the user
 	 */
-	public static User getByName(String name) {
-		return users.get(name);
+	public static User getByChannel(SocketChannel channel) {
+		return users.get(channel);
 	}
 
 	/**
 	 * Create a new user.
-	 * 
-	 * @return true if created successfully; false if name is taken
 	 */
-	public static boolean create(String name, SelectionKey userKey) throws IOException {
-		if (!users.containsKey(name)) {
-			User u = new User(name, userKey);
-			users.put(name, u);
-			MessagingUtils.sendOK(u);
-			return true;
-		}
-
-		return false;
+	public static void create(SocketChannel userChannel) throws IOException {
+		User u = new User(userChannel);
+		users.put(userChannel, u);
 	}
 
 	/**
@@ -53,24 +48,49 @@ public class User {
 	}
 
 	/**
-	 * Gets the user key
+	 * Gets the user channel
 	 * 
-	 * @return the user key
+	 * @return the user channel
 	 */
-	public SelectionKey getKey() {
-		return this.userKey;
+	public SocketChannel getChannel() {
+		return this.userChannel;
 	}
 
 	/**
-	 * Sets the user name
+	 * Gets the user current state
+	 * 
+	 * @return the user state
+	 */
+	public Protocol.State getCurrentState() {
+		return this.currentState;
+	}
+
+	/**
+	 * Sets a new state
+	 * 
+	 * @param newState to set
+	 */
+	public void setState(Protocol.State newState) {
+		this.currentState = newState;
+	}
+
+	/**
+	 * Changes the user name
 	 * 
 	 * @param name to set
+	 * @return if was successful
 	 */
-	public void setName(String name) {
-		users.remove(this.name);
+	public boolean changeName(String name) {
+		name = name.replace("\n", "").replace("\r", "");
+
+		if (names.contains(name))
+			return false;
+
+		names.add(name);
+		names.remove(this.name);
 		this.name = name;
-		users.put(this.name, this);
-		this.userKey.attach(name);
+
+		return true;
 	}
 
 	/**
@@ -78,13 +98,13 @@ public class User {
 	 * 
 	 * @param room to join
 	 */
-	public void joinRoom(Room room) {
+	public void joinRoom(Room room) throws IOException {
 		leaveRoom();
 		room.addUser(this);
 		currentRoom = room;
 	}
 
-	public void joinRoom(String room) {
+	public void joinRoom(String room) throws IOException {
 		joinRoom(Room.getByName(room));
 	}
 
@@ -96,6 +116,17 @@ public class User {
 			return;
 		currentRoom.removeUser(this);
 		currentRoom = null;
+	}
+
+	/**
+	 * Changes user room
+	 * 
+	 * @param room to change to
+	 */
+	public void changeRoom(Room room) throws IOException {
+		leaveRoom();
+		room.addUser(this);
+		currentRoom = room;
 	}
 
 	/**
@@ -112,7 +143,10 @@ public class User {
 	 */
 	public void delete() {
 		leaveRoom();
-		users.remove(this.name);
+		users.remove(this.userChannel);
+		if (currentState != Protocol.State.INIT) {
+			names.remove(this.name);
+		}
 	}
 
 	public void sendMessage(String message) throws IOException {
