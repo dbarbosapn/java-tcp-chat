@@ -2,6 +2,9 @@ import java.io.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import java.nio.channels.SocketChannel;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
 public class ChatClient {
 
@@ -13,6 +16,9 @@ public class ChatClient {
 
     // Se for necessário adicionar variáveis ao objecto ChatClient, devem
     // ser colocadas aqui
+    private SocketChannel clientChannel;
+
+    static private ByteBuffer buffer = ByteBuffer.allocate(6969);
 
     // Method to add a message to the text box
     // * Do not change *
@@ -53,25 +59,54 @@ public class ChatClient {
         });
         // --- End of UI initialization
 
-        // Se for necessário adicionar código de inicialização ao
-        // construtor, deve ser colocado aqui
-
+        /* Creates a new Socket Channel, and makes it NON-BLOCKING */
+        clientChannel = SocketChannel.open(new InetSocketAddress(server, port));
+        clientChannel.configureBlocking(false);
     }
 
     // Method to send message over the server
-    public void newMessage(String message) throws IOException {
+    public void newMessage(String msg) throws IOException {
+        clientChannel.write(ChatServer.charset.encode(msg));
+    }
 
+    /*
+     * Return true if it reads something otherwise false. The message is saved in
+     * the buffer
+     */
+    private boolean readMessage() throws IOException {
+        buffer.clear();
+
+        /* Checks if there's data to read */
+        boolean hasData = clientChannel.read(buffer) > 0;
+
+        buffer.flip();
+
+        return hasData;
+    }
+
+    /* Process received message from server */
+    private void processReceivedMessage() throws IOException {
+        String msg = ChatServer.decoder.decode(buffer).toString();
+
+        printMessage(msg);
     }
 
     // Run method of the client
     public void run() throws IOException {
+        while (true) {
+            /* Active or Inactive check */
+            if (!readMessage())
+                continue;
 
+            processReceivedMessage();
+        }
     }
 
     // Initializes the object and runs it
     // * Do not change *
     public static void main(String[] args) throws IOException {
         ChatClient client = new ChatClient(args[0], Integer.parseInt(args[1]));
+
         client.run();
     }
 

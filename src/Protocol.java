@@ -27,16 +27,6 @@ public class Protocol {
         }
     }
 
-    private static String parseInsideInput(String input) {
-        if (input.charAt(0) == '/' && (input.length() > 1 && input.charAt(1) == '/')) {
-            return input.substring(1);
-        } else if (input.charAt(0) == '/') {
-            return null;
-        } else {
-            return input;
-        }
-    }
-
     private static void initState(String input, User user) throws IOException {
         String[] tokens = parseInput(input);
 
@@ -53,12 +43,16 @@ public class Protocol {
     }
 
     private static void insideState(String input, User user) throws IOException {
-        String message = parseInsideInput(input);
+        /* Checks if its a message without // at the start */
+        if (input.matches("^[^/](.|\\s)*"))
+            user.sendMessage(input);
 
-        if (message == null) {
+        /* Checks if its a message with // at the start */
+        else if (input.matches("^(//)(.|\\s)*"))
+            user.sendMessage(input.replaceFirst("/", ""));
+
+        else {
             String[] tokens = parseInput(input);
-
-            System.out.println("Inside command: " + tokens[0]);
 
             switch (tokens[0]) {
                 case "/join":
@@ -75,9 +69,8 @@ public class Protocol {
                     break;
                 default:
                     MessagingUtils.sendError(user);
+
             }
-        } else {
-            user.sendMessage(message);
         }
     }
 

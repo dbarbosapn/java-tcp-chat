@@ -1,5 +1,4 @@
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 public class MessagingUtils {
@@ -61,7 +60,7 @@ public class MessagingUtils {
         message += '\n';
 
         if (message != null) {
-            channel.write(ByteBuffer.wrap(message.getBytes()));
+            channel.write(ChatServer.charset.encode(message));
         }
     }
 

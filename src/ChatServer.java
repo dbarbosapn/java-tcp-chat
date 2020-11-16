@@ -13,7 +13,7 @@ public class ChatServer {
 	static public final Charset charset = Charset.forName("UTF8");
 
 	/* Constructs a new decoder for this charset. */
-	static private final CharsetDecoder decoder = charset.newDecoder();
+	static public final CharsetDecoder decoder = charset.newDecoder();
 
 	/* A selectable channel for stream-oriented listening sockets. */
 	static private ServerSocketChannel ssc;
