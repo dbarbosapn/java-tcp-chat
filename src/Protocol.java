@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.regex.Pattern;
 
 public class Protocol {
     public static enum State {
@@ -28,16 +27,6 @@ public class Protocol {
         }
     }
 
-    private static String parseInsideInput(String input) {
-        if (input.charAt(0) == '/' && (input.length() > 1 && input.charAt(1) == '/')) {
-            return input.substring(1);
-        } else if (input.charAt(0) == '/') {
-            return null;
-        } else {
-            return input;
-        }
-    }
-
     private static void initState(String input, User user) throws IOException {
         String[] tokens = parseInput(input);
 
@@ -53,39 +42,36 @@ public class Protocol {
         }
     }
 
-    private static void insideState(String input, User user) throws IOException
-    {
-	/* Checks if its a message without // at the start */
-	if ( input.matches("^[^/](.|\\s)*") )
+    private static void insideState(String input, User user) throws IOException {
+        /* Checks if its a message without // at the start */
+        if (input.matches("^[^/](.|\\s)*"))
             user.sendMessage(input);
 
-	/* Checks if its a message with // at the start */
-	else if ( input.matches("^(//)(.|\\s)*") )
-	    user.sendMessage(input.replaceFirst("/", ""));
+        /* Checks if its a message with // at the start */
+        else if (input.matches("^(//)(.|\\s)*"))
+            user.sendMessage(input.replaceFirst("/", ""));
 
-	else
-	    {
-		String[] tokens = parseInput(input);
+        else {
+            String[] tokens = parseInput(input);
 
-		switch (tokens[0])
-		    {
-		    case "/join":
-			joinCommand(tokens, user);
-			break;
-		    case "/nick":
-			nickCommand(tokens, user);
-			break;
-		    case "/leave":
-			leaveCommand(user);
-			break;
-		    case "/bye":
-			byeCommand(user);
-			break;
-		    default:
-			MessagingUtils.sendError(user);
+            switch (tokens[0]) {
+                case "/join":
+                    joinCommand(tokens, user);
+                    break;
+                case "/nick":
+                    nickCommand(tokens, user);
+                    break;
+                case "/leave":
+                    leaveCommand(user);
+                    break;
+                case "/bye":
+                    byeCommand(user);
+                    break;
+                default:
+                    MessagingUtils.sendError(user);
 
-		    }
-	    }
+            }
+        }
     }
 
     private static void outsideState(String input, User user) throws IOException {

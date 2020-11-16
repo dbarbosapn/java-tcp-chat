@@ -5,7 +5,6 @@ import javax.swing.*;
 import java.nio.channels.SocketChannel;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.charset.*;
 
 public class ChatClient {
 
@@ -43,72 +42,69 @@ public class ChatClient {
         chatArea.setEditable(false);
         chatBox.setEditable(true);
         chatBox.addActionListener(new ActionListener() {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-		    try {
-			newMessage(chatBox.getText());
-		    } catch (IOException ex) {
-		    } finally {
-			chatBox.setText("");
-		    }
-		}
-	    });
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    newMessage(chatBox.getText());
+                } catch (IOException ex) {
+                } finally {
+                    chatBox.setText("");
+                }
+            }
+        });
         frame.addWindowListener(new WindowAdapter() {
-		public void windowOpened(WindowEvent e) {
-		    chatBox.requestFocus();
-		}
-	    });
+            public void windowOpened(WindowEvent e) {
+                chatBox.requestFocus();
+            }
+        });
         // --- End of UI initialization
 
-	/* Creates a new Socket Channel, and makes it NON-BLOCKING */
-	clientChannel = SocketChannel.open(new InetSocketAddress(server, port));
-	clientChannel.configureBlocking(false);
+        /* Creates a new Socket Channel, and makes it NON-BLOCKING */
+        clientChannel = SocketChannel.open(new InetSocketAddress(server, port));
+        clientChannel.configureBlocking(false);
     }
 
     // Method to send message over the server
-    public void newMessage(String msg) throws IOException
-    {
-	clientChannel.write(ChatServer.charset.encode(msg));
+    public void newMessage(String msg) throws IOException {
+        clientChannel.write(ChatServer.charset.encode(msg));
     }
 
-    /* Return true if it reads something otherwise false. The "something"
-       read its saved in BYTE form in buffer*/
-    private boolean readMessage() throws IOException
-    {
-	buffer.clear();
+    /*
+     * Return true if it reads something otherwise false. The message is saved in
+     * the buffer
+     */
+    private boolean readMessage() throws IOException {
+        buffer.clear();
 
-	/* Checks if something was read*/
-	boolean rd = clientChannel.read(buffer) > 0;
+        /* Checks if there's data to read */
+        boolean hasData = clientChannel.read(buffer) > 0;
 
-	buffer.flip();
+        buffer.flip();
 
-	return rd;
+        return hasData;
     }
 
-    /* Process recived message from server*/
-    private void processRecivedMessage() throws IOException
-    {
-	String msg = ChatServer.decoder.decode(buffer).toString();
+    /* Process received message from server */
+    private void processReceivedMessage() throws IOException {
+        String msg = ChatServer.decoder.decode(buffer).toString();
 
-	printMessage(msg);
+        printMessage(msg);
     }
 
     // Run method of the client
     public void run() throws IOException {
-	while(true)
-	    {
-		/* Active or Inactive check*/
-		if ( !readMessage() )
-		    continue;
+        while (true) {
+            /* Active or Inactive check */
+            if (!readMessage())
+                continue;
 
-		processRecivedMessage();
-	    }
+            processReceivedMessage();
+        }
     }
 
     // Initializes the object and runs it
     // * Do not change *
-    public static void main(String[] args) throws IOException
-    {
+    public static void main(String[] args) throws IOException {
         ChatClient client = new ChatClient(args[0], Integer.parseInt(args[1]));
 
         client.run();
