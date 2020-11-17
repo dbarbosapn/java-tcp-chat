@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import javax.swing.text.DefaultCaret;
 
 public class ChatClient {
 
@@ -28,6 +29,12 @@ public class ChatClient {
     private ByteBuffer buffer = ByteBuffer.allocate(16384);
 
     private Queue<Command> sentCommands = new LinkedList<>();
+
+    /* We need this list for the same reason we need sentCommands,
+       we need to know which of the new nick name is valid*/
+    private Queue<String> sentUserName = new LinkedList<>();
+
+    private String userName;
 
     // Method to add a message to the text box
     // * Do not change *
@@ -66,6 +73,11 @@ public class ChatClient {
                 chatBox.requestFocus();
             }
         });
+
+	/* Lines added from the professor version. They make the window
+	   scroll down*/
+	DefaultCaret caret = (DefaultCaret)chatArea.getCaret();
+	caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
         // --- End of UI initialization
 
         /* Creates a new Socket Channel, and makes it NON-BLOCKING */
@@ -74,8 +86,11 @@ public class ChatClient {
     }
 
     private void checkSentCommand(String msg) {
-        if (msg.startsWith("/nick"))
-            sentCommands.add(Command.NICK);
+        if (msg.startsWith("/nick")) {
+		sentCommands.add(Command.NICK);
+		sentUserName.add(msg.split(" ")[1]);
+
+	    }
         else if (msg.startsWith("/join"))
             sentCommands.add(Command.JOIN);
         else if (msg.startsWith("/leave"))
@@ -157,6 +172,7 @@ public class ChatClient {
         switch (cmd) {
             case NICK:
                 printMessage("Nome indisponível.");
+		sentUserName.poll();
                 break;
             case JOIN:
                 printMessage("Deve usar primeiro '/nick <nome>' antes de se juntar a uma sala.");
@@ -182,6 +198,7 @@ public class ChatClient {
         switch (cmd) {
             case NICK:
                 printMessage("Nome mudado com sucesso!");
+		userName = sentUserName.poll();
                 break;
             case JOIN:
                 printMessage("Entrou!");
@@ -208,8 +225,9 @@ public class ChatClient {
 
     private void processMessage(String username, String message) {
         // Check if it is our message
-        if (sentCommands.peek() == Command.MESSAGE)
+        if (sentCommands.peek() == Command.MESSAGE && username.contentEquals(userName) )
             sentCommands.poll();
+
         printMessage(username + ": " + message);
     }
 
@@ -225,15 +243,36 @@ public class ChatClient {
         printMessage("Adeus! (Pode fechar a janela)");
     }
 
+    private void listenToServer() throws IOException {
+	while (true) {
+            /* Active or Inactive check */
+            if ( readMessage() )
+		processReceivedMessage();
+	}
+    }
+
+    /* Note this current thread(where we initialize Jstuff) will serve
+       as the user listener, because the eventlistener will be tied with
+       this thread. So we when event is called, it DOES not interfere
+       with the thread where we listen to the server.
+       Do not erase this comment!*/
+
     // Run method of the client
     public void run() throws IOException {
-        while (true) {
-            /* Active or Inactive check */
-            if (!readMessage())
-                continue;
+	Thread listenToServerThread = new Thread () {
+		public void run() {
+		    try {
+			listenToServer();
+		    }
+		    /* On a diferent thread is dificult to catch errors*/
+		    catch ( Exception ignore ) {}
+		}
+	    };
 
-            processReceivedMessage();
-        }
+	listenToServerThread.start();
+
+	/* Important note: No need to call any other functions since
+	   user input is connected to an event listener*/
     }
 
     // Initializes the object and runs it
