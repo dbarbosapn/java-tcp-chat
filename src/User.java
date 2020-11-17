@@ -1,13 +1,11 @@
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class User {
 	private static Map<SocketChannel, User> users = new HashMap<>();
-	private static Set<String> names = new HashSet<>();
+	private static Map<String, User> names = new HashMap<>();
 
 	private String name;
 	private SocketChannel userChannel;
@@ -28,6 +26,16 @@ public class User {
 	 */
 	public static User getByChannel(SocketChannel channel) {
 		return users.get(channel);
+	}
+
+	/**
+	 * Get an user instance from its name
+	 * 
+	 * @param name to search
+	 * @return the user
+	 */
+	public static User getByName(String name) {
+		return names.get(name);
 	}
 
 	/**
@@ -92,10 +100,10 @@ public class User {
 	public boolean changeName(String name) {
 		name = name.replace("\n", "").replace("\r", "");
 
-		if (names.contains(name))
+		if (names.containsKey(name))
 			return false;
 
-		names.add(name);
+		names.put(name, this);
 		names.remove(this.name);
 		this.name = name;
 
@@ -161,5 +169,15 @@ public class User {
 
 	public void sendMessage(String message) throws IOException {
 		currentRoom.sendMessage(this.name, message);
+	}
+
+	public boolean sendPrivateMessage(String name, String message) throws IOException {
+		User targetUser = getByName(name);
+
+		if (targetUser == null)
+			return false;
+
+		MessagingUtils.sendMessage(targetUser, MessageType.PRIVATE, this.name, message);
+		return true;
 	}
 }

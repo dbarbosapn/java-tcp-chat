@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 public class ChatClient {
 
     private static enum Command {
-        NICK, JOIN, LEAVE, BYE, MESSAGE, OTHER
+        NICK, JOIN, LEAVE, BYE, MESSAGE, PRIV, OTHER
     }
 
     // UI Variables (Do not change)
@@ -82,6 +82,8 @@ public class ChatClient {
             sentCommands.add(Command.LEAVE);
         else if (msg.startsWith("/bye"))
             sentCommands.add(Command.BYE);
+        else if (msg.startsWith("/priv"))
+            sentCommands.add(Command.PRIV);
         else
             sentCommands.add(Command.OTHER);
     }
@@ -140,6 +142,9 @@ public class ChatClient {
             case "NEWNICK":
                 processNewNick(removeNewLines(tokens[1]), removeNewLines(tokens[2]));
                 break;
+            case "PRIVATE":
+                processPrivate(removeNewLines(tokens[1]), removeNewLines(msg.split(" ", 3)[2]));
+                break;
             case "BYE":
                 processBye();
                 break;
@@ -162,6 +167,9 @@ public class ChatClient {
             case MESSAGE:
                 printMessage("Deve estar numa sala antes de enviar mensagens. Use '/join <sala>'");
                 break;
+            case PRIV:
+                printMessage("Utilizador inválido.");
+                break;
             default:
                 printMessage("Comando não suportado.");
                 break;
@@ -180,6 +188,9 @@ public class ChatClient {
                 break;
             case LEAVE:
                 printMessage("Saiu.");
+                break;
+            case PRIV:
+                printMessage("Mensagem privada enviada com sucesso!");
                 break;
             default:
                 // Do nothing
@@ -200,6 +211,10 @@ public class ChatClient {
         if (sentCommands.peek() == Command.MESSAGE)
             sentCommands.poll();
         printMessage(username + ": " + message);
+    }
+
+    private void processPrivate(String username, String message) {
+        printMessage(username + " (Em privado): " + message);
     }
 
     private void processNewNick(String oldName, String newName) {
