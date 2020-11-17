@@ -169,6 +169,7 @@ public class ChatClient {
                 break;
             case PRIV:
                 printMessage("Utilizador inválido.");
+                break;
             default:
                 printMessage("Comando não suportado.");
                 break;
