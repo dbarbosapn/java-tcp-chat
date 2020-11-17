@@ -59,8 +59,14 @@ public class Room {
         broadcast(MessageType.LEFT, name);
     }
 
+    public void notifyChangedNickname(String oldName, String newName) throws IOException {
+        broadcast(MessageType.NEWNICK, oldName, newName);
+    }
+
     private void broadcast(MessageType type, String... data) throws IOException {
         for (User user : users) {
+            if (type == MessageType.NEWNICK && user.getName() == data[1])
+                continue;
             MessagingUtils.sendMessage(user, type, data);
         }
     }

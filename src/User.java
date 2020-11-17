@@ -48,6 +48,15 @@ public class User {
 	}
 
 	/**
+	 * Gets the current room
+	 * 
+	 * @return the room
+	 */
+	public Room getCurrentRoom() {
+		return this.currentRoom;
+	}
+
+	/**
 	 * Gets the user channel
 	 * 
 	 * @return the user channel
