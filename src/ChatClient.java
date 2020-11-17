@@ -110,7 +110,7 @@ public class ChatClient {
         else
             sentCommands.add(Command.MESSAGE);
 
-        clientChannel.write(ChatServer.charset.encode(msg));
+        clientChannel.write(ChatServer.charset.encode(msg+"\n"));
     }
 
     /*

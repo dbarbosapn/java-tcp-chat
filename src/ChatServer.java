@@ -6,9 +6,6 @@ import java.nio.charset.*;
 import java.util.*;
 
 public class ChatServer {
-	// A pre-allocated buffer for the received data
-	static private final ByteBuffer buffer = ByteBuffer.allocate(16384);
-
 	/* Returns a charset object for the named charset. */
 	static public final Charset charset = Charset.forName("UTF8");
 
@@ -22,6 +19,9 @@ public class ChatServer {
 
 	/* A multiplexor of SelectableChannel objects. */
 	static private Selector selector;
+
+        private enum BufferState {WAIT, READY, ABORT};
+
 
 	static public void main(String argv[]) throws Exception {
 		int port;
@@ -125,9 +125,9 @@ public class ChatServer {
 				SocketChannel sc = (SocketChannel) curKey.channel();
 
 				try {
-					String socketInput = getSocketInput(sc);
+					BufferState bufferState = getSocketInput(sc);
 
-					if (socketInput == null) {
+					if ( bufferState == BufferState.ABORT ) {
 						User u = User.getByChannel(sc);
 						if (u != null)
 							u.delete();
@@ -143,8 +143,45 @@ public class ChatServer {
 						} catch (IOException ie) {
 							System.err.println("Error closing socket " + s + ": " + ie);
 						}
-					} else {
-						Protocol.processInput(socketInput, sc);
+					}
+
+					else if ( bufferState == BufferState.READY ) {
+					    ByteBuffer buffer = User.getBufferByChannel(sc);
+					    String socketInput = decoder.decode(buffer).toString();
+
+					    /* Count the number of commands/messages in the buffer,
+					       i.e the number o \n*/
+					    int count = 0;
+
+					    for( int i=0; i < socketInput.length(); i++ )
+						if ( socketInput.charAt(i) == '\n' )
+						    count++;
+
+					    /* Get the various tokens with \n as delimiter*/
+					    String[] token =  socketInput.split("\n");
+
+					    /* For each \n(aka command or message) we do something*/
+					    int i;
+					    for( i=0; i<count; i++ )
+						Protocol.processInput(token[i], sc);
+
+					    /* Condition test if after we parsed the buffer there is
+					       still something there that didn't end with new line*/
+					    if ( i > count )
+						{
+						    /* Atention to this statement the correct position
+						     WILL change with the different types of encoding
+						     we use!!!*/
+						    buffer.position(buffer.limit()-token[i].length());
+
+						    buffer.compact();
+						}
+
+					    /* Means that the last byte/bytes were the end of line if so
+					       we can simply clear it*/
+					    else
+					        buffer.clear();
+
 					}
 				} catch (IOException ie) {
 					User u = User.getByChannel(sc);
@@ -168,14 +205,34 @@ public class ChatServer {
 		keySet.clear();
 	}
 
-	static private String getSocketInput(SocketChannel sc) throws IOException {
-		buffer.clear();
-		sc.read(buffer);
-		buffer.flip();
+	static private BufferState getSocketInput(SocketChannel sc) throws IOException {
+	    ByteBuffer buffer = User.getBufferByChannel(sc);
 
-		if (buffer.limit() == 0)
-			return null;
+	    /* Nothing was read but getSOcketInput was still called
+	       meaning user must have closed the connection*/
+	    if ( sc.read(buffer) <= 0 )
+		return BufferState.ABORT;
 
-		return decoder.decode(buffer).toString();
+	    /* Save buffer curent possition*/
+	    int prevPos = buffer.position();
+
+	    /* Put buffer in a configuration to be possible to read it.
+	       We cannot simply check last byte in buffer */
+	    buffer.flip();
+	    String input = decoder.decode(buffer).toString();
+
+	    /* Revert back to the previous configuration*/
+	    buffer.position(prevPos);
+	    buffer.limit(buffer.capacity());
+
+	    if ( input.contains("\n") )
+		{
+		    buffer.flip();
+		    return BufferState.READY;
+		}
+
+	    else
+		return BufferState.WAIT;
+
 	}
 }
