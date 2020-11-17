@@ -97,8 +97,6 @@ public class ChatServer {
 			/* Returns the next element in the iteration */
 			SelectionKey curKey = keyIt.next();
 
-			/* Check activity */
-
 			/*
 			 * Tests whether this key's channel is ready to accept a new socket connection.
 			 */

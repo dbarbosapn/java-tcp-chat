@@ -46,11 +46,9 @@ public class Protocol {
         /* Checks if its a message without // at the start */
         if (input.matches("^[^/](.|\\s)*"))
             user.sendMessage(input);
-
         /* Checks if its a message with // at the start */
         else if (input.matches("^(//)(.|\\s)*"))
             user.sendMessage(input.replaceFirst("/", ""));
-
         else {
             String[] tokens = parseInput(input);
 
@@ -93,11 +91,15 @@ public class Protocol {
     }
 
     private static void nickCommand(String[] tokens, User user) throws IOException {
+        String oldName = user.getName();
+
         if (tokens.length != 2 || !user.changeName(tokens[1])) {
             MessagingUtils.sendError(user);
         } else {
             if (user.getCurrentState() == State.INIT)
                 user.setState(State.OUTSIDE);
+            else if (user.getCurrentState() == State.INSIDE)
+                user.getCurrentRoom().notifyChangedNickname(oldName, user.getName());
             MessagingUtils.sendOK(user);
         }
     }
