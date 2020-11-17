@@ -46,6 +46,9 @@ public class MessagingUtils {
             case MESSAGE:
                 message = "MESSAGE " + data[0] + " " + data[1];
                 break;
+            case PRIVATE:
+                message = "PRIVATE " + data[0] + " " + data[1];
+                break;
             case NEWNICK:
                 message = "NEWNICK " + data[0] + " " + data[1];
                 break;

@@ -62,6 +62,9 @@ public class Protocol {
                 case "/leave":
                     leaveCommand(user);
                     break;
+                case "/priv":
+                    privCommand(user, input);
+                    break;
                 case "/bye":
                     byeCommand(user);
                     break;
@@ -85,6 +88,9 @@ public class Protocol {
             case "/bye":
                 byeCommand(user);
                 break;
+            case "/priv":
+                privCommand(user, input);
+                break;
             default:
                 MessagingUtils.sendError(user);
         }
@@ -101,6 +107,16 @@ public class Protocol {
             else if (user.getCurrentState() == State.INSIDE)
                 user.getCurrentRoom().notifyChangedNickname(oldName, user.getName());
             MessagingUtils.sendOK(user);
+        }
+    }
+
+    private static void privCommand(User user, String input) throws IOException {
+        String[] tokens = input.split(" ", 3);
+
+        if (tokens.length == 3 && user.sendPrivateMessage(tokens[1], tokens[2])) {
+            MessagingUtils.sendOK(user);
+        } else {
+            MessagingUtils.sendError(user);
         }
     }
 
