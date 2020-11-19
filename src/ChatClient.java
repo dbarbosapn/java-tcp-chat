@@ -30,8 +30,10 @@ public class ChatClient {
 
     private Queue<Command> sentCommands = new LinkedList<>();
 
-    /* We need this list for the same reason we need sentCommands,
-       we need to know which of the new nick name is valid*/
+    /*
+     * We need this list for the same reason we need sentCommands, we need to know
+     * which of the new nick name is valid
+     */
     private Queue<String> sentUserName = new LinkedList<>();
 
     private String userName;
@@ -74,10 +76,8 @@ public class ChatClient {
             }
         });
 
-	/* Lines added from the professor version. They make the window
-	   scroll down*/
-	DefaultCaret caret = (DefaultCaret)chatArea.getCaret();
-	caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
+        DefaultCaret caret = (DefaultCaret) chatArea.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
         // --- End of UI initialization
 
         /* Creates a new Socket Channel, and makes it NON-BLOCKING */
@@ -87,11 +87,10 @@ public class ChatClient {
 
     private void checkSentCommand(String msg) {
         if (msg.startsWith("/nick")) {
-		sentCommands.add(Command.NICK);
-		sentUserName.add(msg.split(" ")[1]);
+            sentCommands.add(Command.NICK);
+            sentUserName.add(msg.split(" ")[1]);
 
-	    }
-        else if (msg.startsWith("/join"))
+        } else if (msg.startsWith("/join"))
             sentCommands.add(Command.JOIN);
         else if (msg.startsWith("/leave"))
             sentCommands.add(Command.LEAVE);
@@ -172,7 +171,7 @@ public class ChatClient {
         switch (cmd) {
             case NICK:
                 printMessage("Nome indisponível.");
-		sentUserName.poll();
+                sentUserName.poll();
                 break;
             case JOIN:
                 printMessage("Deve usar primeiro '/nick <nome>' antes de se juntar a uma sala.");
@@ -198,7 +197,7 @@ public class ChatClient {
         switch (cmd) {
             case NICK:
                 printMessage("Nome mudado com sucesso!");
-		userName = sentUserName.poll();
+                userName = sentUserName.poll();
                 break;
             case JOIN:
                 printMessage("Entrou!");
@@ -225,7 +224,7 @@ public class ChatClient {
 
     private void processMessage(String username, String message) {
         // Check if it is our message
-        if (sentCommands.peek() == Command.MESSAGE && username.contentEquals(userName) )
+        if (sentCommands.peek() == Command.MESSAGE && username.contentEquals(userName))
             sentCommands.poll();
 
         printMessage(username + ": " + message);
@@ -244,35 +243,38 @@ public class ChatClient {
     }
 
     private void listenToServer() throws IOException {
-	while (true) {
+        while (true) {
             /* Active or Inactive check */
-            if ( readMessage() )
-		processReceivedMessage();
-	}
+            if (readMessage())
+                processReceivedMessage();
+        }
     }
 
-    /* Note this current thread(where we initialize Jstuff) will serve
-       as the user listener, because the eventlistener will be tied with
-       this thread. So we when event is called, it DOES not interfere
-       with the thread where we listen to the server.
-       Do not erase this comment!*/
+    /*
+     * Note: The main thread is where user UI events will be caught. So when an
+     * event is called, it DOES not interfere with the thread where we listen to the
+     * server.
+     */
 
     // Run method of the client
     public void run() throws IOException {
-	Thread listenToServerThread = new Thread () {
-		public void run() {
-		    try {
-			listenToServer();
-		    }
-		    /* On a diferent thread is dificult to catch errors*/
-		    catch ( Exception ignore ) {}
-		}
-	    };
+        Thread listenToServerThread = new Thread() {
+            public void run() {
+                try {
+                    listenToServer();
+                }
+                /* On a diferent thread it's dificult to catch errors */
+                catch (Exception ignore) {
+                }
+            }
+        };
 
-	listenToServerThread.start();
+        listenToServerThread.start();
 
-	/* Important note: No need to call any other functions since
-	   user input is connected to an event listener*/
+        /*
+         * Important note: No need to call any other functions since user input is
+         * connected to an event listener
+         */
     }
 
     // Initializes the object and runs it
