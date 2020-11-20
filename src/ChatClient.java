@@ -109,7 +109,7 @@ public class ChatClient {
         else
             sentCommands.add(Command.MESSAGE);
 
-        clientChannel.write(ChatServer.charset.encode(msg));
+        clientChannel.write(ChatServer.charset.encode(msg + "\n"));
     }
 
     /*
@@ -262,10 +262,7 @@ public class ChatClient {
             public void run() {
                 try {
                     listenToServer();
-                }
-                /* On a diferent thread it's dificult to catch errors */
-                catch (Exception ignore) {
-                }
+                } catch (Exception ignore) { }
             }
         };
 

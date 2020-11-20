@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
+import java.nio.ByteBuffer;
 
 public class User {
 	private static Map<SocketChannel, User> users = new HashMap<>();
@@ -12,6 +13,8 @@ public class User {
 	private Room currentRoom;
 	private Protocol.State currentState;
 
+	private ByteBuffer buffer = ByteBuffer.allocate(16384);
+
 	private User(SocketChannel userChannel) {
 		this.userChannel = userChannel;
 		this.currentState = Protocol.State.INIT;
@@ -20,7 +23,7 @@ public class User {
 
 	/**
 	 * Get an user instance from its channel
-	 * 
+	 *
 	 * @param channel to search
 	 * @return the user
 	 */
@@ -30,7 +33,7 @@ public class User {
 
 	/**
 	 * Get an user instance from its name
-	 * 
+	 *
 	 * @param name to search
 	 * @return the user
 	 */
@@ -48,7 +51,7 @@ public class User {
 
 	/**
 	 * Gets the user name
-	 * 
+	 *
 	 * @return the user name
 	 */
 	public String getName() {
@@ -56,8 +59,17 @@ public class User {
 	}
 
 	/**
+	 * Gets the user buffer
+	 *
+	 * @return the user buffer
+	 */
+	public ByteBuffer getBuffer() {
+		return this.buffer;
+	}
+
+	/**
 	 * Gets the current room
-	 * 
+	 *
 	 * @return the room
 	 */
 	public Room getCurrentRoom() {
@@ -66,7 +78,7 @@ public class User {
 
 	/**
 	 * Gets the user channel
-	 * 
+	 *
 	 * @return the user channel
 	 */
 	public SocketChannel getChannel() {
@@ -75,7 +87,7 @@ public class User {
 
 	/**
 	 * Gets the user current state
-	 * 
+	 *
 	 * @return the user state
 	 */
 	public Protocol.State getCurrentState() {
@@ -84,7 +96,7 @@ public class User {
 
 	/**
 	 * Sets a new state
-	 * 
+	 *
 	 * @param newState to set
 	 */
 	public void setState(Protocol.State newState) {
@@ -93,7 +105,7 @@ public class User {
 
 	/**
 	 * Changes the user name
-	 * 
+	 *
 	 * @param name to set
 	 * @return if was successful
 	 */
@@ -112,7 +124,7 @@ public class User {
 
 	/**
 	 * Joins a room
-	 * 
+	 *
 	 * @param room to join
 	 */
 	public void joinRoom(Room room) throws IOException {
@@ -137,7 +149,7 @@ public class User {
 
 	/**
 	 * Changes user room
-	 * 
+	 *
 	 * @param room to change to
 	 */
 	public void changeRoom(Room room) throws IOException {
@@ -148,7 +160,7 @@ public class User {
 
 	/**
 	 * Checks if user is currently in a room
-	 * 
+	 *
 	 * @return if is in a room
 	 */
 	public boolean isInRoom() {
