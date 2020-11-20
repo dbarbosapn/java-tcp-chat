@@ -1,3 +1,0 @@
-/nick bomrapaz
-/join sala
-Bom Dia
