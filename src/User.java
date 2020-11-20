@@ -13,7 +13,7 @@ public class User {
 	private Room currentRoom;
 	private Protocol.State currentState;
 
-        protected ByteBuffer buffer = ByteBuffer.allocate(16384);
+	private ByteBuffer buffer = ByteBuffer.allocate(16384);
 
 	private User(SocketChannel userChannel) {
 		this.userChannel = userChannel;
@@ -41,10 +41,6 @@ public class User {
 		return names.get(name);
 	}
 
-        public static ByteBuffer getBufferByChannel(SocketChannel channel) {
-	       return User.getByChannel(channel).buffer;
-	}
-
 	/**
 	 * Create a new user.
 	 */
@@ -60,6 +56,15 @@ public class User {
 	 */
 	public String getName() {
 		return this.name;
+	}
+
+	/**
+	 * Gets the user buffer
+	 *
+	 * @return the user buffer
+	 */
+	public ByteBuffer getBuffer() {
+		return this.buffer;
 	}
 
 	/**
