@@ -76,9 +76,6 @@ public class ChatClient {
             }
         });
 
-        /*
-         * Lines added from the professor version. They make the window scroll down
-         */
         DefaultCaret caret = (DefaultCaret) chatArea.getCaret();
         caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
         // --- End of UI initialization
@@ -254,10 +251,9 @@ public class ChatClient {
     }
 
     /*
-     * Note this current thread(where we initialize Jstuff) will serve as the user
-     * listener, because the eventlistener will be tied with this thread. So we when
+     * Note: The main thread is where user UI events will be caught. So when an
      * event is called, it DOES not interfere with the thread where we listen to the
-     * server. Do not erase this comment!
+     * server.
      */
 
     // Run method of the client
@@ -266,10 +262,7 @@ public class ChatClient {
             public void run() {
                 try {
                     listenToServer();
-                }
-                /* On a diferent thread is dificult to catch errors */
-                catch (Exception ignore) {
-                }
+                } catch (Exception ignore) { }
             }
         };
 
